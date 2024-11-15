@@ -42,7 +42,8 @@ func main() {
 					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
 				},
 			),
-		},
+		}, 
+		true,
 	)
 
 	ctx := context.Background()

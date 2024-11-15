@@ -14,10 +14,10 @@ type VirtualSwitch struct {
 	wg        *sync.WaitGroup
 }
 
-func NewVirtualSwitch(vPorts []*VirtualPort) *VirtualSwitch {
+func NewVirtualSwitch(vPorts []*VirtualPort, outputTableChanges bool) *VirtualSwitch {
 	return &VirtualSwitch{
 		vPorts:    vPorts,
-		sMACTable: NewMACTable(),
+		sMACTable: NewMACTable(outputTableChanges),
 		cancel:    nil,
 		wg:        new(sync.WaitGroup),
 		mu:        sync.Mutex{},
@@ -96,7 +96,7 @@ func (vs *VirtualSwitch) broadcastFrame(ctx context.Context, vSourcePort *Virtua
 		if vPort.PortName() == vSourcePort.PortName() {
 			continue
 		}
-		
+
 		if ok := vs.sendFrame(ctx, vPort, frame); !ok {
 			return
 		}
