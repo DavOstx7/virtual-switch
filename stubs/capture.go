@@ -19,7 +19,7 @@ type FrameSource interface {
 type FrameSourceStub struct {
 	MaxJitterSeconds int
 	PortName         string
-	SourceMAC        string
+	SourceMACs       []string
 	DestinationMACs  []string
 	Closed           bool
 
@@ -35,14 +35,13 @@ func (s *FrameSourceStub) Frames() <-chan pkg.Frame {
 
 			time.Sleep(randomDuration)
 
-			destinationMAC := ChooseRandomly(s.DestinationMACs)
 			frame := &FrameStub{
 				bytes:          nil,
-				sourceMAC:      s.SourceMAC,
-				destinationMAC: destinationMAC,
+				sourceMAC:      ChooseRandomly(s.SourceMACs),
+				destinationMAC: ChooseRandomly(s.DestinationMACs),
 			}
 
-			fmt.Printf("captured frame %s on port '%s\n", FrameToString(frame), s.PortName)
+			fmt.Printf("captured frame %s on port '%s'\n", FrameToString(frame), s.PortName)
 			s.frames <- frame
 		}
 	}()
@@ -64,7 +63,7 @@ type FrameSourceProvider interface {
 
 type FrameSourceProviderStub struct {
 	MaxJitterSeconds int
-	SourceMAC        string
+	SourceMACs       []string
 	DestinationMACs  []string
 }
 
@@ -72,7 +71,7 @@ func (sp *FrameSourceProviderStub) FrameSource(portName string) (pkg.FrameSource
 	return &FrameSourceStub{
 		MaxJitterSeconds: sp.MaxJitterSeconds,
 		PortName:         portName,
-		SourceMAC:        sp.SourceMAC,
+		SourceMACs:       sp.SourceMACs,
 		DestinationMACs:  sp.DestinationMACs,
 	}, nil
 }

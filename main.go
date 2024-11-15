@@ -14,7 +14,7 @@ func main() {
 					PortName: "eth1",
 					FrameSourceProvider: &stubs.FrameSourceProviderStub{
 						MaxJitterSeconds: 5,
-						SourceMAC:        "AAA",
+						SourceMACs:       []string{"AAA"},
 						DestinationMACs:  []string{"BBB", "CCC"},
 					},
 					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
@@ -25,7 +25,7 @@ func main() {
 					PortName: "eth2",
 					FrameSourceProvider: &stubs.FrameSourceProviderStub{
 						MaxJitterSeconds: 10,
-						SourceMAC:        "BBB",
+						SourceMACs:       []string{"BBB"},
 						DestinationMACs:  []string{"AAA", "CCC"},
 					},
 					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
@@ -36,13 +36,13 @@ func main() {
 					PortName: "eth3",
 					FrameSourceProvider: &stubs.FrameSourceProviderStub{
 						MaxJitterSeconds: 20,
-						SourceMAC:        "CCC",
+						SourceMACs:       []string{"CCC"},
 						DestinationMACs:  []string{"AAA", "BBB"},
 					},
 					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
 				},
 			),
-		}, 
+		},
 		true,
 	)
 
