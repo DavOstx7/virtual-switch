@@ -7,18 +7,20 @@ import (
 )
 
 type VirtualSwitch struct {
-	vPorts []*VirtualPort
-	mu     sync.Mutex
-	cancel context.CancelFunc
-	wg     *sync.WaitGroup
+	vPorts    []*VirtualPort
+	sMACTable *MACTable
+	mu        sync.Mutex
+	cancel    context.CancelFunc
+	wg        *sync.WaitGroup
 }
 
 func NewVirtualSwitch(vPorts []*VirtualPort) *VirtualSwitch {
 	return &VirtualSwitch{
-		vPorts: vPorts,
-		cancel: nil,
-		wg:     new(sync.WaitGroup),
-		mu:     sync.Mutex{},
+		vPorts:    vPorts,
+		sMACTable: NewMACTable(),
+		cancel:    nil,
+		wg:        new(sync.WaitGroup),
+		mu:        sync.Mutex{},
 	}
 }
 
@@ -76,17 +78,14 @@ func (vs *VirtualSwitch) forwardFrames(ctx context.Context, vPort *VirtualPort) 
 }
 
 func (vs *VirtualSwitch) forwardFrame(ctx context.Context, vSourcePort *VirtualPort, frame Frame) {
-	/*
-		sMacTable.UpdateSourceEntry(frame.SourceMAC(), vSourcePort.PortName())
+	vs.sMACTable.UpdateSourceEntry(frame.SourceMAC(), vSourcePort)
 
-		vDestinationPort := sMACTable.GetDestinationPort(frame.DestinationMAC())
-		if vDestinationPort != nil {
-			vDestinationPort.OutFrames() <- frame
-		} else {
-		 	vs.broadcastFrame(ctx, vSourcePort, frame)
-		}
-	*/
-	vs.broadcastFrame(ctx, vSourcePort, frame)
+	vDestinationPort := vs.sMACTable.GetDestinationPort(frame.DestinationMAC())
+	if vDestinationPort == nil {
+		vs.broadcastFrame(ctx, vSourcePort, frame)
+	} else {
+		vs.sendFrame(ctx, vDestinationPort, frame)
+	}
 }
 
 func (vs *VirtualSwitch) broadcastFrame(ctx context.Context, vSourcePort *VirtualPort, frame Frame) {
@@ -97,11 +96,18 @@ func (vs *VirtualSwitch) broadcastFrame(ctx context.Context, vSourcePort *Virtua
 		if vPort.PortName() == vSourcePort.PortName() {
 			continue
 		}
-
-		select {
-		case vPort.OutFrames() <- frame:
-		case <-ctx.Done():
+		
+		if ok := vs.sendFrame(ctx, vPort, frame); !ok {
 			return
 		}
+	}
+}
+
+func (vs *VirtualSwitch) sendFrame(ctx context.Context, vPort *VirtualPort, frame Frame) (ok bool) {
+	select {
+	case vPort.OutFrames() <- frame:
+		return true
+	case <-ctx.Done():
+		return false
 	}
 }
