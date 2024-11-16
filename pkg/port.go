@@ -3,7 +3,11 @@ package pkg
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 )
+
+const DefaultStopTimeout time.Duration = 1 * time.Second
 
 // Assumes Ethernet
 type Frame interface {
@@ -13,10 +17,11 @@ type Frame interface {
 }
 
 type VirtualPort struct {
-	portName      string
-	cancel        context.CancelFunc
 	FrameCapture  *FrameCapture
 	FrameTransmit *FrameTransmit
+	portName      string
+	mu            sync.Mutex
+	cancel        context.CancelFunc
 }
 
 type VirtualPortConfig struct {
@@ -27,10 +32,9 @@ type VirtualPortConfig struct {
 
 func NewVirtualPort(config *VirtualPortConfig) *VirtualPort {
 	return &VirtualPort{
+		FrameCapture:  NewFrameCapture(config.PortName, config.FrameSourceProvider, DefaultStopTimeout),
+		FrameTransmit: NewFrameTransmit(config.PortName, config.FrameTransmitterProvider, DefaultStopTimeout),
 		portName:      config.PortName,
-		cancel:        nil,
-		FrameCapture:  NewFrameCapture(config.PortName, config.FrameSourceProvider),
-		FrameTransmit: NewFrameTransmit(config.PortName, config.FrameTransmitterProvider),
 	}
 }
 
@@ -47,34 +51,84 @@ func (vp *VirtualPort) OutFrames() chan<- Frame {
 }
 
 func (vp *VirtualPort) IsOn() bool {
-	return vp.cancel != nil
+	vp.mu.Lock()
+	defer vp.mu.Unlock()
+	return vp._isOn()
 }
 
 func (vp *VirtualPort) On(ctx context.Context) error {
-	if vp.IsOn() {
+	vp.mu.Lock()
+	defer vp.mu.Unlock()
+
+	if vp._isOn() {
 		return nil
 	}
 
-	newCtx, cancel := context.WithCancel(ctx)
-
-	if err := vp.FrameCapture.On(newCtx); err != nil {
-		fmt.Println(err)
-	}
-
-	if err := vp.FrameTransmit.On(newCtx); err != nil {
-		fmt.Println(err)
-	}
-
-	vp.cancel = cancel
+	newCtx, newCancel := context.WithCancel(ctx)
+	vp.startTasks(newCtx)
+	vp.cancel = newCancel
 	return nil
 }
 
 func (vp *VirtualPort) Off() {
-	if !vp.IsOn() {
+	vp.stopTasks(true)
+}
+
+func (vp *VirtualPort) Finalize() {
+	vp.stopTasks(false)
+}
+
+func (vp *VirtualPort) startTasks(ctx context.Context) {
+	// could potentially be sending an error to an error channel upon one of the tasks returning an error (would require cleanup)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		if err := vp.FrameCapture.On(ctx); err != nil {
+			fmt.Println(err)
+		}
+		wg.Done()
+	}()
+	go func() {
+		if err := vp.FrameTransmit.On(ctx); err != nil {
+			fmt.Println(err)
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
+	vp.cancel = nil
+}
+
+func (vp *VirtualPort) stopTasks(shouldCancel bool) {
+	vp.mu.Lock()
+	defer vp.mu.Unlock()
+
+	if !vp._isOn() {
 		return
 	}
 
-	vp.cancel()
-	vp.FrameCapture.Finalize()
-	vp.FrameTransmit.Finalize()
+	if shouldCancel {
+		vp.cancel()
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		vp.FrameCapture.Finalize()
+		wg.Done()
+	}()
+	go func() {
+		vp.FrameTransmit.Finalize()
+		wg.Done()
+	}()
+
+	wg.Wait()
+	vp.cancel = nil
+}
+
+func (vp *VirtualPort) _isOn() bool {
+	return vp.cancel != nil
 }

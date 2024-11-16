@@ -14,7 +14,7 @@ type FrameTransmitter interface {
 
 type FrameTransmitterStub struct {
 	PortName string
-	Closed   bool
+	closed   bool
 }
 
 func (t *FrameTransmitterStub) TransmitFrame(frame pkg.Frame) error {
@@ -24,7 +24,7 @@ func (t *FrameTransmitterStub) TransmitFrame(frame pkg.Frame) error {
 
 func (t *FrameTransmitterStub) Close() {
 	fmt.Printf("closing frame transmission on port '%s'\n", t.PortName)
-	t.Closed = true
+	t.closed = true
 }
 
 /*
@@ -40,5 +40,6 @@ type FrameTransmitterProviderStub struct {
 func (ftf *FrameTransmitterProviderStub) FrameTransmitter(portName string) (pkg.FrameTransmitter, error) {
 	return &FrameTransmitterStub{
 		PortName: portName,
+		closed:   false,
 	}, nil
 }

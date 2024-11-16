@@ -4,7 +4,14 @@ import (
 	"fmt"
 	"math/rand"
 	"project/pkg"
+	"time"
 )
+
+func SleepRandomly(maxDuration time.Duration) {
+	randomDuration := time.Duration(rand.Intn(int(maxDuration)))
+
+	time.Sleep(randomDuration)
+}
 
 func ChooseRandomly[T any](s []T) T {
 	randomIndex := rand.Intn(len(s))

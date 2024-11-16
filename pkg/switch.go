@@ -18,52 +18,59 @@ func NewVirtualSwitch(vPorts []*VirtualPort, outputTableChanges bool) *VirtualSw
 	return &VirtualSwitch{
 		vPorts:    vPorts,
 		sMACTable: NewMACTable(outputTableChanges),
-		cancel:    nil,
 		wg:        new(sync.WaitGroup),
-		mu:        sync.Mutex{},
 	}
 }
 
-func (vp *VirtualSwitch) IsOn() bool {
-	return vp.cancel != nil
+func (vs *VirtualSwitch) IsOn() bool {
+	vs.mu.Lock()
+	defer vs.mu.Unlock()
+	return vs._isOn()
 }
 
 func (vs *VirtualSwitch) On(ctx context.Context) error {
-	newCtx, cancel := context.WithCancel(ctx)
-
 	vs.mu.Lock()
-	for _, vPort := range vs.vPorts {
-		if err := vPort.On(newCtx); err != nil {
-			fmt.Println(err)
-		}
+	defer vs.mu.Unlock()
 
-		vs.wg.Add(1)
-		go vs.forwardFrames(newCtx, vPort)
+	if vs._isOn() {
+		return nil
 	}
-	vs.mu.Unlock()
 
-	vs.cancel = cancel
+	newCtx, newCancel := context.WithCancel(ctx)
+	vs.enableAllPorts(newCtx)
+	vs.cancel = newCancel
 	return nil
 }
 
 func (vs *VirtualSwitch) Off() {
-	if !vs.IsOn() {
-		return
-	}
+	vs.stopForwarding(true)
+}
 
-	vs.cancel()
-	vs.wg.Wait()
+func (vs *VirtualSwitch) Finalize() {
+	vs.stopForwarding(false)
 }
 
 func (vs *VirtualSwitch) Wait() {
-	if !vs.IsOn() {
-		return
-	}
-
 	vs.wg.Wait()
 }
 
-func (vs *VirtualSwitch) forwardFrames(ctx context.Context, vPort *VirtualPort) {
+func (vs *VirtualSwitch) enableAllPorts(ctx context.Context) error {
+	// could potentially be returning an error upon one of the ports returning an error (would require cleanup)
+
+	for _, vPort := range vs.vPorts {
+		if err := vPort.On(ctx); err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		vs.wg.Add(1)
+		go vs.startForwarding(ctx, vPort)
+	}
+
+	return nil
+}
+
+func (vs *VirtualSwitch) startForwarding(ctx context.Context, vPort *VirtualPort) {
 	defer vs.wg.Done()
 
 	frames := vPort.InFrames()
@@ -110,4 +117,24 @@ func (vs *VirtualSwitch) sendFrame(ctx context.Context, vPort *VirtualPort, fram
 	case <-ctx.Done():
 		return false
 	}
+}
+
+func (vs *VirtualSwitch) stopForwarding(shouldCancel bool) {
+	vs.mu.Lock()
+	defer vs.mu.Unlock()
+
+	if !vs._isOn() {
+		return
+	}
+
+	if shouldCancel {
+		vs.cancel()
+	}
+
+	vs.wg.Wait()
+	vs.cancel = nil
+}
+
+func (vs *VirtualSwitch) _isOn() bool {
+	return vs.cancel != nil
 }
