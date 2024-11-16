@@ -58,7 +58,7 @@ func (ft *FrameTransmit) On(ctx context.Context) error {
 	ft.done = make(chan bool)
 
 	go ft.startTransmission(newCtx, frameTransmitter)
-	
+
 	ft.cancel = newCancel
 	return nil
 }
@@ -67,7 +67,7 @@ func (ft *FrameTransmit) Off() {
 	ft.stopTransmission(true)
 }
 
-func (ft *FrameTransmit) Finalize() {
+func (ft *FrameTransmit) Finish() {
 	ft.stopTransmission(false)
 }
 
@@ -105,7 +105,7 @@ func (ft *FrameTransmit) stopTransmission(shouldCancel bool) {
 	ft.cancel = nil
 }
 
-func (ft *FrameTransmit) waitUntillStopped(){
+func (ft *FrameTransmit) waitUntillStopped() {
 	select {
 	case <-ft.done:
 	case <-time.After(ft.stopTimeout):

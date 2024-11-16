@@ -67,7 +67,7 @@ func (fc *FrameCapture) Off() {
 	fc.stopCapture(true)
 }
 
-func (fc *FrameCapture) Finalize() {
+func (fc *FrameCapture) Finish() {
 	fc.stopCapture(false)
 }
 

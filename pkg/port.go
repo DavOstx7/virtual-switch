@@ -74,7 +74,7 @@ func (vp *VirtualPort) Off() {
 	vp.stopTasks(true)
 }
 
-func (vp *VirtualPort) Finalize() {
+func (vp *VirtualPort) Finish() {
 	vp.stopTasks(false)
 }
 
@@ -117,11 +117,11 @@ func (vp *VirtualPort) stopTasks(shouldCancel bool) {
 	wg.Add(2)
 
 	go func() {
-		vp.FrameCapture.Finalize()
+		vp.FrameCapture.Finish()
 		wg.Done()
 	}()
 	go func() {
-		vp.FrameTransmit.Finalize()
+		vp.FrameTransmit.Finish()
 		wg.Done()
 	}()
 

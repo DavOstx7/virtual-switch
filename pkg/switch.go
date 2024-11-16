@@ -46,7 +46,7 @@ func (vs *VirtualSwitch) Off() {
 	vs.stopForwarding(true)
 }
 
-func (vs *VirtualSwitch) Finalize() {
+func (vs *VirtualSwitch) Finish() {
 	vs.stopForwarding(false)
 }
 
