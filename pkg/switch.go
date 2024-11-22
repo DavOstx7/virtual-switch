@@ -3,58 +3,27 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"sync"
+	"project/pkg/toggle"
 )
 
 type VirtualSwitch struct {
+	toggle.AggregateToggler
 	vPorts    []*VirtualPort
 	sMACTable *MACTable
-	mu        sync.Mutex
-	cancel    context.CancelFunc
-	wg        *sync.WaitGroup
 }
 
 func NewVirtualSwitch(vPorts []*VirtualPort, outputTableChanges bool) *VirtualSwitch {
-	return &VirtualSwitch{
+	vs := &VirtualSwitch{
 		vPorts:    vPorts,
 		sMACTable: NewMACTable(outputTableChanges),
-		wg:        new(sync.WaitGroup),
-	}
-}
-
-func (vs *VirtualSwitch) IsOn() bool {
-	vs.mu.Lock()
-	defer vs.mu.Unlock()
-	return vs._isOn()
-}
-
-func (vs *VirtualSwitch) On(ctx context.Context) error {
-	vs.mu.Lock()
-	defer vs.mu.Unlock()
-
-	if vs._isOn() {
-		return nil
 	}
 
-	newCtx, newCancel := context.WithCancel(ctx)
-	vs.enableAllPorts(newCtx)
-	vs.cancel = newCancel
-	return nil
+	vs.Setup(vs.startFrameForwarding)
+
+	return vs
 }
 
-func (vs *VirtualSwitch) Off() {
-	vs.stopForwarding(true)
-}
-
-func (vs *VirtualSwitch) Finish() {
-	vs.stopForwarding(false)
-}
-
-func (vs *VirtualSwitch) Wait() {
-	vs.wg.Wait()
-}
-
-func (vs *VirtualSwitch) enableAllPorts(ctx context.Context) error {
+func (vs *VirtualSwitch) startFrameForwarding(ctx context.Context) error {
 	// could potentially be returning an error upon one of the ports returning an error (would require cleanup)
 
 	for _, vPort := range vs.vPorts {
@@ -63,15 +32,15 @@ func (vs *VirtualSwitch) enableAllPorts(ctx context.Context) error {
 			continue
 		}
 
-		vs.wg.Add(1)
-		go vs.startForwarding(ctx, vPort)
+		vs.Wg.Add(1)
+		go vs.forwardFrames(ctx, vPort)
 	}
 
 	return nil
 }
 
-func (vs *VirtualSwitch) startForwarding(ctx context.Context, vPort *VirtualPort) {
-	defer vs.wg.Done()
+func (vs *VirtualSwitch) forwardFrames(ctx context.Context, vPort *VirtualPort) {
+	defer vs.Wg.Done()
 
 	frames := vPort.InFrames()
 	for {
@@ -96,8 +65,8 @@ func (vs *VirtualSwitch) forwardFrame(ctx context.Context, vSourcePort *VirtualP
 }
 
 func (vs *VirtualSwitch) broadcastFrame(ctx context.Context, vSourcePort *VirtualPort, frame Frame) {
-	vs.mu.Lock()
-	defer vs.mu.Unlock()
+	vs.Mu.Lock()
+	defer vs.Mu.Unlock()
 
 	for _, vPort := range vs.vPorts {
 		if vPort.PortName() == vSourcePort.PortName() {
@@ -117,24 +86,4 @@ func (vs *VirtualSwitch) sendFrame(ctx context.Context, vPort *VirtualPort, fram
 	case <-ctx.Done():
 		return false
 	}
-}
-
-func (vs *VirtualSwitch) stopForwarding(shouldCancel bool) {
-	vs.mu.Lock()
-	defer vs.mu.Unlock()
-
-	if !vs._isOn() {
-		return
-	}
-
-	if shouldCancel {
-		vs.cancel()
-	}
-
-	vs.wg.Wait()
-	vs.cancel = nil
-}
-
-func (vs *VirtualSwitch) _isOn() bool {
-	return vs.cancel != nil
 }

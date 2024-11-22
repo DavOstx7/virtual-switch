@@ -3,7 +3,7 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"sync"
+	"project/pkg/toggle"
 	"time"
 )
 
@@ -17,62 +17,36 @@ type FrameTransmitterProvider interface {
 }
 
 type FrameTransmit struct {
+	toggle.AtomicToggler
 	portName            string
 	outFrames           chan Frame
 	transmitterProvider FrameTransmitterProvider
-	stopTimeout         time.Duration
-	mu                  sync.Mutex
-	cancel              context.CancelFunc
-	done                chan bool
 }
 
 func NewFrameTransmit(portName string, transmitterProvider FrameTransmitterProvider, stopTimeout time.Duration) *FrameTransmit {
-	return &FrameTransmit{
+	fc := &FrameTransmit{
 		portName:            portName,
 		outFrames:           make(chan Frame),
 		transmitterProvider: transmitterProvider,
-		stopTimeout:         stopTimeout,
-	}
-}
-
-func (ft *FrameTransmit) IsOn() bool {
-	ft.mu.Lock()
-	defer ft.mu.Unlock()
-	return ft._isOn()
-}
-
-func (ft *FrameTransmit) On(ctx context.Context) error {
-	ft.mu.Lock()
-	defer ft.mu.Unlock()
-
-	if ft._isOn() {
-		return nil
 	}
 
+	fc.Setup(fc.startFrameTransmission)
+
+	return fc
+}
+
+func (ft *FrameTransmit) startFrameTransmission(ctx context.Context) error {
 	frameTransmitter, err := ft.transmitterProvider.FrameTransmitter(ft.portName)
 	if err != nil {
 		return err
 	}
 
-	newCtx, newCancel := context.WithCancel(ctx)
-	ft.done = make(chan bool)
-
-	go ft.startTransmission(newCtx, frameTransmitter)
-
-	ft.cancel = newCancel
+	go ft.transmitFrames(ctx, frameTransmitter)
 	return nil
 }
 
-func (ft *FrameTransmit) Off() {
-	ft.stopTransmission(true)
-}
-
-func (ft *FrameTransmit) Finish() {
-	ft.stopTransmission(false)
-}
-
-func (ft *FrameTransmit) startTransmission(ctx context.Context, frameTransmitter FrameTransmitter) {
-	defer close(ft.done)
+func (ft *FrameTransmit) transmitFrames(ctx context.Context, frameTransmitter FrameTransmitter) {
+	defer close(ft.Done)
 	defer frameTransmitter.Close()
 
 	for {
@@ -86,38 +60,4 @@ func (ft *FrameTransmit) startTransmission(ctx context.Context, frameTransmitter
 			return
 		}
 	}
-}
-
-func (ft *FrameTransmit) stopTransmission(shouldCancel bool) {
-	ft.mu.Lock()
-	defer ft.mu.Unlock()
-
-	if !ft._isOn() {
-		return
-	}
-
-	if shouldCancel {
-		ft.cancel()
-	}
-
-	ft.waitUntillStopped()
-	ft.done = nil
-	ft.cancel = nil
-}
-
-func (ft *FrameTransmit) waitUntillStopped() {
-	select {
-	case <-ft.done:
-	case <-time.After(ft.stopTimeout):
-		msg := fmt.Sprintf(
-			"frame-transmit: timed out while waiting %f seconds for transmission to stop on port '%s'",
-			ft.stopTimeout.Seconds(), ft.portName,
-		)
-		panic(msg)
-
-	}
-}
-
-func (ft *FrameTransmit) _isOn() bool {
-	return ft.cancel != nil
 }

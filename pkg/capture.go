@@ -2,8 +2,7 @@ package pkg
 
 import (
 	"context"
-	"fmt"
-	"sync"
+	"project/pkg/toggle"
 	"time"
 )
 
@@ -17,62 +16,36 @@ type FrameSourceProvider interface {
 }
 
 type FrameCapture struct {
+	toggle.AtomicToggler
 	portName       string
 	inFrames       chan Frame
 	sourceProvider FrameSourceProvider
-	stopTimeout    time.Duration
-	mu             sync.Mutex
-	cancel         context.CancelFunc
-	done           chan bool
 }
 
 func NewFrameCapture(portName string, sourceProvider FrameSourceProvider, stopTimeout time.Duration) *FrameCapture {
-	return &FrameCapture{
+	fc := &FrameCapture{
 		portName:       portName,
 		inFrames:       make(chan Frame),
 		sourceProvider: sourceProvider,
-		stopTimeout:    stopTimeout,
-	}
-}
-
-func (fc *FrameCapture) IsOn() bool {
-	fc.mu.Lock()
-	defer fc.mu.Unlock()
-	return fc._isOn()
-}
-
-func (fc *FrameCapture) On(ctx context.Context) error {
-	fc.mu.Lock()
-	defer fc.mu.Unlock()
-
-	if fc._isOn() {
-		return nil
 	}
 
+	fc.Setup(fc.startFrameCapture)
+
+	return fc
+}
+
+func (fc *FrameCapture) startFrameCapture(ctx context.Context) error {
 	frameSource, err := fc.sourceProvider.FrameSource(fc.portName)
 	if err != nil {
 		return err
 	}
 
-	newCtx, newCancel := context.WithCancel(ctx)
-	fc.done = make(chan bool)
-
-	go fc.startCapture(newCtx, frameSource)
-
-	fc.cancel = newCancel
+	go fc.captureFrames(ctx, frameSource)
 	return nil
 }
 
-func (fc *FrameCapture) Off() {
-	fc.stopCapture(true)
-}
-
-func (fc *FrameCapture) Finish() {
-	fc.stopCapture(false)
-}
-
-func (fc *FrameCapture) startCapture(ctx context.Context, frameSource FrameSource) {
-	defer close(fc.done)
+func (fc *FrameCapture) captureFrames(ctx context.Context, frameSource FrameSource) {
+	defer close(fc.Done)
 
 	frames := frameSource.Frames()
 	defer frameSource.Close()
@@ -89,37 +62,4 @@ func (fc *FrameCapture) startCapture(ctx context.Context, frameSource FrameSourc
 			return
 		}
 	}
-}
-
-func (fc *FrameCapture) stopCapture(shouldCancel bool) {
-	fc.mu.Lock()
-	defer fc.mu.Unlock()
-
-	if !fc._isOn() {
-		return
-	}
-
-	if shouldCancel {
-		fc.cancel()
-	}
-
-	fc.waitUntillStopped()
-	fc.done = nil
-	fc.cancel = nil
-}
-
-func (fc *FrameCapture) waitUntillStopped() {
-	select {
-	case <-fc.done:
-	case <-time.After(fc.stopTimeout):
-		msg := fmt.Sprintf(
-			"frame-transmit: timed out while waiting %f seconds for capture to stop on port '%s'",
-			fc.stopTimeout.Seconds(), fc.portName,
-		)
-		panic(msg)
-	}
-}
-
-func (fc *FrameCapture) _isOn() bool {
-	return fc.cancel != nil
 }

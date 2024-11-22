@@ -49,5 +49,7 @@ func main() {
 
 	ctx := context.Background()
 	vSwitch.On(ctx)
-	vSwitch.Wait()
+	for {
+
+	}
 }

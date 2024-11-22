@@ -3,7 +3,7 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"sync"
+	"project/pkg/toggle"
 	"time"
 )
 
@@ -17,11 +17,10 @@ type Frame interface {
 }
 
 type VirtualPort struct {
+	toggle.CommonToggler
 	FrameCapture  *FrameCapture
 	FrameTransmit *FrameTransmit
 	portName      string
-	mu            sync.Mutex
-	cancel        context.CancelFunc
 }
 
 type VirtualPortConfig struct {
@@ -31,11 +30,15 @@ type VirtualPortConfig struct {
 }
 
 func NewVirtualPort(config *VirtualPortConfig) *VirtualPort {
-	return &VirtualPort{
+	vp := &VirtualPort{
 		FrameCapture:  NewFrameCapture(config.PortName, config.FrameSourceProvider, DefaultStopTimeout),
 		FrameTransmit: NewFrameTransmit(config.PortName, config.FrameTransmitterProvider, DefaultStopTimeout),
 		portName:      config.PortName,
 	}
+
+	vp.Setup(vp.startFrameOperations, vp.stopFrameOperations)
+
+	return vp
 }
 
 func (vp *VirtualPort) PortName() string {
@@ -50,85 +53,16 @@ func (vp *VirtualPort) OutFrames() chan<- Frame {
 	return vp.FrameTransmit.outFrames
 }
 
-func (vp *VirtualPort) IsOn() bool {
-	vp.mu.Lock()
-	defer vp.mu.Unlock()
-	return vp._isOn()
-}
-
-func (vp *VirtualPort) On(ctx context.Context) error {
-	vp.mu.Lock()
-	defer vp.mu.Unlock()
-
-	if vp._isOn() {
-		return nil
+func (vp *VirtualPort) startFrameOperations(ctx context.Context) error {
+	for err := range toggle.On(ctx, vp.FrameCapture, vp.FrameTransmit) {
+		fmt.Println(err)
 	}
-
-	newCtx, newCancel := context.WithCancel(ctx)
-	vp.startTasks(newCtx)
-	vp.cancel = newCancel
 	return nil
 }
 
-func (vp *VirtualPort) Off() {
-	vp.stopTasks(true)
-}
-
-func (vp *VirtualPort) Finish() {
-	vp.stopTasks(false)
-}
-
-func (vp *VirtualPort) startTasks(ctx context.Context) {
-	// could potentially be sending an error to an error channel upon one of the tasks returning an error (would require cleanup)
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		if err := vp.FrameCapture.On(ctx); err != nil {
-			fmt.Println(err)
-		}
-		wg.Done()
-	}()
-	go func() {
-		if err := vp.FrameTransmit.On(ctx); err != nil {
-			fmt.Println(err)
-		}
-		wg.Done()
-	}()
-
-	wg.Wait()
-	vp.cancel = nil
-}
-
-func (vp *VirtualPort) stopTasks(shouldCancel bool) {
-	vp.mu.Lock()
-	defer vp.mu.Unlock()
-
-	if !vp._isOn() {
-		return
+func (vp *VirtualPort) stopFrameOperations() error {
+	for err := range toggle.Off(vp.FrameCapture, vp.FrameTransmit) {
+		fmt.Println(err)
 	}
-
-	if shouldCancel {
-		vp.cancel()
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		vp.FrameCapture.Finish()
-		wg.Done()
-	}()
-	go func() {
-		vp.FrameTransmit.Finish()
-		wg.Done()
-	}()
-
-	wg.Wait()
-	vp.cancel = nil
-}
-
-func (vp *VirtualPort) _isOn() bool {
-	return vp.cancel != nil
+	return nil
 }
