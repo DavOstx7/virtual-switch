@@ -12,7 +12,7 @@ type Transmitter interface {
 }
 
 type TransmitterProvider interface {
-	NewFrameTransmitter(portName string) (Transmitter, error)
+	NewFrameTransmitter(ctx context.Context, portName string) (Transmitter, error)
 }
 
 type Transmit struct {
@@ -39,7 +39,7 @@ func (t *Transmit) OutFrames() chan<- Frame {
 }
 
 func (t *Transmit) startFrameTransmit(ctx context.Context) error {
-	transmitter, err := t.transmitterProvider.NewFrameTransmitter(t.portName)
+	transmitter, err := t.transmitterProvider.NewFrameTransmitter(ctx, t.portName)
 	if err != nil {
 		return err
 	}

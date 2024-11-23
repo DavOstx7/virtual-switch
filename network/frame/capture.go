@@ -11,7 +11,7 @@ type Source interface {
 }
 
 type SourceProvider interface {
-	NewFrameSource(portName string) (Source, error)
+	NewFrameSource(ctx context.Context, portName string) (Source, error)
 }
 
 type Capture struct {
@@ -38,7 +38,7 @@ func (c *Capture) InFrames() <-chan Frame {
 }
 
 func (c *Capture) startFrameCapture(ctx context.Context) error {
-	source, err := c.sourceProvider.NewFrameSource(c.portName)
+	source, err := c.sourceProvider.NewFrameSource(ctx, c.portName)
 	if err != nil {
 		return err
 	}

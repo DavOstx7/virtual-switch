@@ -17,15 +17,15 @@ func (t *FrameTransmitter) TransmitFrame(ctx context.Context, frame frame.Frame)
 }
 
 func (t *FrameTransmitter) Close() {
-	fmt.Printf("closing frame transmission on port '%s'\n", t.PortName)
 	t.closed = true
+	fmt.Printf("closed frame transmission on port '%s'\n", t.PortName)
 }
 
 type FrameTransmitterProvider struct {
 	PortName string
 }
 
-func (ftf *FrameTransmitterProvider) NewFrameTransmitter(portName string) (frame.Transmitter, error) {
+func (ftf *FrameTransmitterProvider) NewFrameTransmitter(ctx context.Context, portName string) (frame.Transmitter, error) {
 	return &FrameTransmitter{
 		PortName: portName,
 		closed:   false,

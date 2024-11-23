@@ -1,6 +1,7 @@
 package stubs
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"project/network/frame"
@@ -8,7 +9,7 @@ import (
 	"time"
 )
 
-const DefaultFrameSourceStopTimeout time.Duration = 5
+const DefaultFrameSourceStopTimeout time.Duration = 5 * time.Second
 
 type FrameSource struct {
 	PortName        string
@@ -28,7 +29,8 @@ func (fs *FrameSource) Frames() <-chan frame.Frame {
 func (fs *FrameSource) Close() {
 	fs.once.Do(func() {
 		select {
-		case fs.done <- true:
+		case <-fs.done:
+			fmt.Printf("closed frame capture on port '%s'\n", fs.PortName)
 		case <-time.After(fs.stopTimeout):
 			msg := fmt.Sprintf(
 				"frame-source-stab: timed out while waiting %f seconds to signal done on port '%s'",
@@ -39,11 +41,11 @@ func (fs *FrameSource) Close() {
 	})
 }
 
-func (fs *FrameSource) generateRandomFrames() {
+func (fs *FrameSource) generateRandomFrames(ctx context.Context) {
 	defer fs.close()
 
 	for {
-		if ok := fs.waitWithJitter(); !ok {
+		if ok := fs.waitWithJitter(ctx); !ok {
 			return
 		}
 
@@ -56,13 +58,13 @@ func (fs *FrameSource) generateRandomFrames() {
 		select {
 		case fs.frames <- frame:
 			fmt.Printf("captured frame %s on port '%s'\n", FrameToString(frame), fs.PortName)
-		case <-fs.done:
+		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (fs *FrameSource) waitWithJitter() (ok bool) {
+func (fs *FrameSource) waitWithJitter(ctx context.Context) (ok bool) {
 	waitTime := time.Duration(rand.Intn(int(fs.MaxJitter)))
 
 	timer := time.NewTimer(waitTime)
@@ -71,13 +73,12 @@ func (fs *FrameSource) waitWithJitter() (ok bool) {
 	select {
 	case <-timer.C:
 		return true
-	case <-fs.done:
+	case <-ctx.Done():
 		return false
 	}
 }
 
 func (s *FrameSource) close() {
-	fmt.Printf("closing frame capture on port '%s'\n", s.PortName)
 	close(s.frames)
 	close(s.done)
 }
@@ -88,7 +89,7 @@ type FrameSourceProvider struct {
 	MaxJitter       time.Duration
 }
 
-func (sp *FrameSourceProvider) NewFrameSource(portName string) (frame.Source, error) {
+func (sp *FrameSourceProvider) NewFrameSource(ctx context.Context, portName string) (frame.Source, error) {
 	if sp.MaxJitter <= 0 {
 		return nil, fmt.Errorf("frame-source-provider-stub: max jitter duration must be positive")
 	}
@@ -106,7 +107,7 @@ func (sp *FrameSourceProvider) NewFrameSource(portName string) (frame.Source, er
 		stopTimeout:     DefaultFrameSourceStopTimeout,
 	}
 
-	go fs.generateRandomFrames()
+	go fs.generateRandomFrames(ctx)
 
 	return fs, nil
 }
