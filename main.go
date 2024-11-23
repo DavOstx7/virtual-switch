@@ -2,45 +2,45 @@ package main
 
 import (
 	"context"
-	"project/pkg"
+	"project/network/virtual"
 	"project/stubs"
 	"time"
 )
 
 func main() {
-	vSwitch := pkg.NewVirtualSwitch(
-		[]*pkg.VirtualPort{
-			pkg.NewVirtualPort(
-				&pkg.VirtualPortConfig{
+	vSwitch := virtual.NewSwitch(
+		[]*virtual.Port{
+			virtual.NewPort(
+				&virtual.PortConfig{
 					PortName: "eth1",
-					FrameSourceProvider: &stubs.FrameSourceProviderStub{
+					FrameSourceProvider: &stubs.FrameSourceProvider{
 						MaxJitter:       5 * time.Second,
 						SourceMACs:      []string{"AAA"},
 						DestinationMACs: []string{"BBB", "CCC"},
 					},
-					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
+					FrameTransmitterProvider: &stubs.FrameTransmitterProvider{},
 				},
 			),
-			pkg.NewVirtualPort(
-				&pkg.VirtualPortConfig{
+			virtual.NewPort(
+				&virtual.PortConfig{
 					PortName: "eth2",
-					FrameSourceProvider: &stubs.FrameSourceProviderStub{
+					FrameSourceProvider: &stubs.FrameSourceProvider{
 						MaxJitter:       10 * time.Second,
 						SourceMACs:      []string{"BBB"},
 						DestinationMACs: []string{"AAA", "CCC"},
 					},
-					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
+					FrameTransmitterProvider: &stubs.FrameTransmitterProvider{},
 				},
 			),
-			pkg.NewVirtualPort(
-				&pkg.VirtualPortConfig{
+			virtual.NewPort(
+				&virtual.PortConfig{
 					PortName: "eth3",
-					FrameSourceProvider: &stubs.FrameSourceProviderStub{
+					FrameSourceProvider: &stubs.FrameSourceProvider{
 						MaxJitter:       20 * time.Second,
 						SourceMACs:      []string{"CCC"},
 						DestinationMACs: []string{"AAA", "BBB"},
 					},
-					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
+					FrameTransmitterProvider: &stubs.FrameTransmitterProvider{},
 				},
 			),
 		},

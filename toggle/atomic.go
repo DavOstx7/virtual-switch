@@ -2,7 +2,6 @@ package toggle
 
 import "context"
 
-
 type AtomicToggler struct {
 	CommonToggler
 	Done chan bool

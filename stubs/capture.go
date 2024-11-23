@@ -3,45 +3,29 @@ package stubs
 import (
 	"fmt"
 	"math/rand"
-	"project/pkg"
+	"project/network/frame"
 	"sync"
 	"time"
 )
 
 const DefaultFrameSourceStopTimeout time.Duration = 5
 
-type FrameSourceStub struct {
+type FrameSource struct {
 	PortName        string
 	SourceMACs      []string
 	DestinationMACs []string
 	MaxJitter       time.Duration
 	once            sync.Once
-	frames          chan pkg.Frame
+	frames          chan frame.Frame
 	done            chan bool
 	stopTimeout     time.Duration
 }
 
-func NewFrameSourceStub(portName string, sourceMACs, destinationMACs []string, maxJitter time.Duration) *FrameSourceStub {
-	fs := &FrameSourceStub{
-		PortName:        portName,
-		SourceMACs:      sourceMACs,
-		DestinationMACs: destinationMACs,
-		MaxJitter:       maxJitter,
-		frames:          make(chan pkg.Frame),
-		done:            make(chan bool),
-		stopTimeout:     DefaultFrameSourceStopTimeout,
-	}
-
-	go fs.sendRandomFrames()
-
-	return fs
-}
-
-func (fs *FrameSourceStub) Frames() <-chan pkg.Frame {
+func (fs *FrameSource) Frames() <-chan frame.Frame {
 	return fs.frames
 }
 
-func (fs *FrameSourceStub) Close() {
+func (fs *FrameSource) Close() {
 	fs.once.Do(func() {
 		select {
 		case fs.done <- true:
@@ -55,7 +39,7 @@ func (fs *FrameSourceStub) Close() {
 	})
 }
 
-func (fs *FrameSourceStub) sendRandomFrames() {
+func (fs *FrameSource) generateRandomFrames() {
 	defer fs.close()
 
 	for {
@@ -78,7 +62,7 @@ func (fs *FrameSourceStub) sendRandomFrames() {
 	}
 }
 
-func (fs *FrameSourceStub) waitWithJitter() (ok bool) {
+func (fs *FrameSource) waitWithJitter() (ok bool) {
 	waitTime := time.Duration(rand.Intn(int(fs.MaxJitter)))
 
 	timer := time.NewTimer(waitTime)
@@ -92,19 +76,19 @@ func (fs *FrameSourceStub) waitWithJitter() (ok bool) {
 	}
 }
 
-func (s *FrameSourceStub) close() {
+func (s *FrameSource) close() {
 	fmt.Printf("closing frame capture on port '%s'\n", s.PortName)
 	close(s.frames)
 	close(s.done)
 }
 
-type FrameSourceProviderStub struct {
+type FrameSourceProvider struct {
 	SourceMACs      []string
 	DestinationMACs []string
 	MaxJitter       time.Duration
 }
 
-func (sp *FrameSourceProviderStub) FrameSource(portName string) (pkg.FrameSource, error) {
+func (sp *FrameSourceProvider) NewFrameSource(portName string) (frame.Source, error) {
 	if sp.MaxJitter <= 0 {
 		return nil, fmt.Errorf("frame-source-provider-stub: max jitter duration must be positive")
 	}
@@ -112,5 +96,17 @@ func (sp *FrameSourceProviderStub) FrameSource(portName string) (pkg.FrameSource
 		return nil, fmt.Errorf("frame-source-provider-stub: SourceMACs and DestinationMACs cannot be empty")
 	}
 
-	return NewFrameSourceStub(portName, sp.SourceMACs, sp.DestinationMACs, sp.MaxJitter), nil
+	fs := &FrameSource{
+		PortName:        portName,
+		SourceMACs:      sp.SourceMACs,
+		DestinationMACs: sp.DestinationMACs,
+		MaxJitter:       sp.MaxJitter,
+		frames:          make(chan frame.Frame),
+		done:            make(chan bool),
+		stopTimeout:     DefaultFrameSourceStopTimeout,
+	}
+
+	go fs.generateRandomFrames()
+
+	return fs, nil
 }

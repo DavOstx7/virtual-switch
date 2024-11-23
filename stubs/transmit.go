@@ -1,44 +1,32 @@
 package stubs
 
 import (
+	"context"
 	"fmt"
-	"project/pkg"
+	"project/network/frame"
 )
 
-/*
-type FrameTransmitter interface {
-	TransmitFrame(frame Frame) error
-	Close()
-}
-*/
-
-type FrameTransmitterStub struct {
+type FrameTransmitter struct {
 	PortName string
 	closed   bool
 }
 
-func (t *FrameTransmitterStub) TransmitFrame(frame pkg.Frame) error {
+func (t *FrameTransmitter) TransmitFrame(ctx context.Context, frame frame.Frame) error {
 	fmt.Printf("transmitting frame %s on port '%s'\n", FrameToString(frame), t.PortName)
 	return nil
 }
 
-func (t *FrameTransmitterStub) Close() {
+func (t *FrameTransmitter) Close() {
 	fmt.Printf("closing frame transmission on port '%s'\n", t.PortName)
 	t.closed = true
 }
 
-/*
-type FrameTransmitterProvider interface {
-	FrameTransmitter(portName string) (FrameTransmitter, error)
-}
-*/
-
-type FrameTransmitterProviderStub struct {
+type FrameTransmitterProvider struct {
 	PortName string
 }
 
-func (ftf *FrameTransmitterProviderStub) FrameTransmitter(portName string) (pkg.FrameTransmitter, error) {
-	return &FrameTransmitterStub{
+func (ftf *FrameTransmitterProvider) NewFrameTransmitter(portName string) (frame.Transmitter, error) {
+	return &FrameTransmitter{
 		PortName: portName,
 		closed:   false,
 	}, nil

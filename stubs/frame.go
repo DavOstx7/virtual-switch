@@ -1,13 +1,5 @@
 package stubs
 
-/*
-type Frame interface {
-	Bytes() []byte
-	SourceMAC() string
-	DestinationMAC() string
-}
-*/
-
 type FrameStub struct {
 	bytes          []byte
 	sourceMAC      string

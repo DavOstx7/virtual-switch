@@ -3,7 +3,7 @@ package stubs
 import (
 	"fmt"
 	"math/rand"
-	"project/pkg"
+	"project/network/frame"
 	"time"
 )
 
@@ -18,6 +18,6 @@ func ChooseRandomly[T any](s []T) T {
 	return s[randomIndex]
 }
 
-func FrameToString(f pkg.Frame) string {
+func FrameToString(f frame.Frame) string {
 	return fmt.Sprintf("[Source: '%s', Destination: '%s']", f.SourceMAC(), f.DestinationMAC())
 }
