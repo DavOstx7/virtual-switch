@@ -20,11 +20,11 @@ type FrameSniffer struct {
 	portName      string
 	inFrames      chan Frame
 	sourceFactory FrameSourceFactory
-	sToggleBox    *boxes.SafeAtomicToggleBox
+	sToggleBox    *boxes.AssistedAtomicToggleBox
 }
 
 func NewFrameSniffer(portName string, sourceFactory FrameSourceFactory) *FrameSniffer {
-	sToggleBox := boxes.NewSafeAtomicToggleBox()
+	sToggleBox := boxes.NewAssistedAtomicToggleBox()
 
 	fs := &FrameSniffer{
 		TogglerAPI:    toggle.NewTogglerAPI(sToggleBox),

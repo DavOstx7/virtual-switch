@@ -12,7 +12,7 @@ type VirtualPort struct {
 	FrameSniffer     *FrameSniffer
 	FrameTransmitter *FrameTransmitter
 	portName         string
-	sToggleBox       *boxes.SafeToggleBox
+	sToggleBox       *boxes.AssistedSafeToggleBox
 }
 
 type VirtualPortConfig struct {
@@ -22,7 +22,7 @@ type VirtualPortConfig struct {
 }
 
 func NewVirtualPort(config *VirtualPortConfig) *VirtualPort {
-	sToggleBox := boxes.NewSafeToggleBox()
+	sToggleBox := boxes.NewAssistedSafeToggleBox()
 
 	vp := &VirtualPort{
 		TogglerAPI:       toggle.NewTogglerAPI(sToggleBox),

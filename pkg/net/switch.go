@@ -12,12 +12,12 @@ type VirtualSwitch struct {
 	*toggle.TogglerAPI
 	vPorts     []*VirtualPort
 	sMACTable  *MACTable
-	sToggleBox *boxes.SafeAggregateToggleBox
+	sToggleBox *boxes.AssistedCollectiveToggleBox
 	mu         sync.Mutex
 }
 
 func NewVirtualSwitch(vPorts []*VirtualPort, outputTableChanges bool) *VirtualSwitch {
-	sToggleBox := boxes.NewSafeAggregateToggleBox()
+	sToggleBox := boxes.NewAssistedCollectiveToggleBox()
 
 	vs := &VirtualSwitch{
 		TogglerAPI: toggle.NewTogglerAPI(sToggleBox),
@@ -67,15 +67,10 @@ func (vs *VirtualSwitch) forwardFrames(ctx context.Context, vPort *VirtualPort) 
 	frames := vPort.InFrames()
 	for {
 		select {
+		case frame := <-frames:
+			vs.forwardFrame(ctx, vPort, frame)
 		case <-ctx.Done():
 			return
-		default:
-			select {
-			case frame := <-frames:
-				vs.forwardFrame(ctx, vPort, frame)
-			case <-ctx.Done():
-				return
-			}
 		}
 	}
 }

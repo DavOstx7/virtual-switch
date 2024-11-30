@@ -3,21 +3,21 @@ package boxes
 import "context"
 
 type StartFunc func(context.Context) error
-type FinalizeFunc func() error
+type StopFunc func() error
 
 type ToggleBox struct {
-	startFunc    StartFunc
-	finalizeFunc FinalizeFunc
-	cancel       context.CancelFunc
+	startFunc StartFunc
+	stopFunc  StopFunc
+	cancel    context.CancelFunc
 }
 
 func NewToggleBox() *ToggleBox {
 	return new(ToggleBox)
 }
 
-func (b *ToggleBox) Setup(startFunc StartFunc, finalizeFunc FinalizeFunc) {
+func (b *ToggleBox) Setup(startFunc StartFunc, stopFunc StopFunc) {
 	b.startFunc = startFunc
-	b.finalizeFunc = finalizeFunc
+	b.stopFunc = stopFunc
 }
 
 func (b *ToggleBox) IsOn() bool {
@@ -44,11 +44,14 @@ func (b *ToggleBox) Off() error {
 		return nil
 	}
 
-	b.cancel()
-	if err := b.finalizeFunc(); err != nil {
+	if err := b.stopFunc(); err != nil {
 		return err
 	}
 
 	b.cancel = nil
 	return nil
+}
+
+func (b *ToggleBox) Cancel() {
+	b.cancel()
 }

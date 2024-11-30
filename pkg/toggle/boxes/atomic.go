@@ -1,33 +1,30 @@
 package boxes
 
-import "context"
+import (
+	"context"
+	"project/pkg/utils"
+)
 
-type SafeAtomicToggleBox struct {
+type AtomicToggleBox struct {
 	SafeToggleBox
 	done chan bool
 }
 
-func NewSafeAtomicToggleBox() *SafeAtomicToggleBox {
-	return new(SafeAtomicToggleBox)
-}
-
-func (b *SafeAtomicToggleBox) BasicSetup(startFunc StartFunc) {
-	wrappedStartFunc := b.wrapStartFunc(startFunc)
-	defaultFinalizeFunc := b.defaultFinalizeFunc()
-	b.SafeToggleBox.Setup(wrappedStartFunc, defaultFinalizeFunc)
-}
-
-func (b *SafeAtomicToggleBox) Setup(startFunc StartFunc, finalizeFunc FinalizeFunc) {
-	wrappedStartFunc := b.wrapStartFunc(startFunc)
-	wrappedFinalizeFunc := b.wrapFinalizeFunc(finalizeFunc)
-	b.SafeToggleBox.Setup(wrappedStartFunc, wrappedFinalizeFunc)
-}
-
-func (b *SafeAtomicToggleBox) MarkDone() {
+func (b *AtomicToggleBox) MarkDone() {
 	close(b.done)
 }
 
-func (b *SafeAtomicToggleBox) wrapStartFunc(startFunc StartFunc) StartFunc {
+func (b *AtomicToggleBox) Wait() {
+	<-b.done
+}
+
+func (b *AtomicToggleBox) Setup(startFunc StartFunc, stopFunc StopFunc) {
+	wrappedStartFunc := b.wrapStartFunc(startFunc)
+	wrappedStopFunc := b.wrapStopFunc(stopFunc)
+	b.SafeToggleBox.Setup(wrappedStartFunc, wrappedStopFunc)
+}
+
+func (b *AtomicToggleBox) wrapStartFunc(startFunc StartFunc) StartFunc {
 	return func(ctx context.Context) error {
 		b.done = make(chan bool)
 		if err := startFunc(ctx); err != nil {
@@ -39,10 +36,9 @@ func (b *SafeAtomicToggleBox) wrapStartFunc(startFunc StartFunc) StartFunc {
 	}
 }
 
-func (b *SafeAtomicToggleBox) wrapFinalizeFunc(finalizeFunc FinalizeFunc) FinalizeFunc {
+func (b *AtomicToggleBox) wrapStopFunc(stopFunc StopFunc) StopFunc {
 	return func() error {
-		<-b.done
-		if err := finalizeFunc(); err != nil {
+		if err := stopFunc(); err != nil {
 			return err
 		}
 		b.done = nil
@@ -50,10 +46,29 @@ func (b *SafeAtomicToggleBox) wrapFinalizeFunc(finalizeFunc FinalizeFunc) Finali
 	}
 }
 
-func (b *SafeAtomicToggleBox) defaultFinalizeFunc() FinalizeFunc {
+/* ------------------------------------------------------------------------------ */
+
+type AssistedAtomicToggleBox struct {
+	AtomicToggleBox
+}
+
+func NewAssistedAtomicToggleBox() *AssistedAtomicToggleBox {
+	return new(AssistedAtomicToggleBox)
+}
+
+func (b *AssistedAtomicToggleBox) Setup(startFunc StartFunc, finalizeFunc func() error) {
+	stopFunc := b.wrapFinalizeFuncToStopFunc(finalizeFunc)
+	b.AtomicToggleBox.Setup(startFunc, stopFunc)
+}
+
+func (b *AssistedAtomicToggleBox) BasicSetup(startFunc StartFunc) {
+	b.Setup(startFunc, nil)
+}
+
+func (b *AssistedAtomicToggleBox) wrapFinalizeFuncToStopFunc(finalizeFunc func() error) StopFunc {
 	return func() error {
+		b.cancel()
 		<-b.done
-		b.done = nil
-		return nil
+		return utils.ExecuteFunc(finalizeFunc)
 	}
 }
