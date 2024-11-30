@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const SwitchOnDuration = 10 * time.Second
+
 func main() {
 	vSwitch := net.NewVirtualSwitch(
 		[]*net.VirtualPort{
@@ -49,7 +51,6 @@ func main() {
 
 	ctx := context.Background()
 	vSwitch.On(ctx)
-	for {
-
-	}
+	time.Sleep(SwitchOnDuration)
+	vSwitch.Off()
 }
