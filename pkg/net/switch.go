@@ -67,10 +67,15 @@ func (vs *VirtualSwitch) forwardFrames(ctx context.Context, vPort *VirtualPort) 
 	frames := vPort.InFrames()
 	for {
 		select {
-		case frame := <-frames:
-			vs.forwardFrame(ctx, vPort, frame)
 		case <-ctx.Done():
 			return
+		default:
+			select {
+			case frame := <-frames:
+				vs.forwardFrame(ctx, vPort, frame)
+			case <-ctx.Done():
+				return
+			}
 		}
 	}
 }
