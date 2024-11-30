@@ -3,7 +3,7 @@ package net
 import (
 	"context"
 	"project/pkg/toggle"
-	"project/pkg/toggle/boxes"
+	"project/pkg/toggle/boxes/atomic"
 )
 
 type FrameSource interface {
@@ -20,11 +20,11 @@ type FrameSniffer struct {
 	portName      string
 	inFrames      chan Frame
 	sourceFactory FrameSourceFactory
-	sToggleBox    *boxes.AssistedAtomicToggleBox
+	sToggleBox    *atomic.AssistedToggleBox
 }
 
 func NewFrameSniffer(portName string, sourceFactory FrameSourceFactory) *FrameSniffer {
-	sToggleBox := boxes.NewAssistedAtomicToggleBox()
+	sToggleBox := atomic.NewAssistedToggleBox()
 
 	fs := &FrameSniffer{
 		TogglerAPI:    toggle.NewTogglerAPI(sToggleBox),

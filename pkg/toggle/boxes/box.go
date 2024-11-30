@@ -1,6 +1,9 @@
 package boxes
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 type StartFunc func(context.Context) error
 type StopFunc func() error
@@ -15,43 +18,68 @@ func NewToggleBox() *ToggleBox {
 	return new(ToggleBox)
 }
 
-func (b *ToggleBox) Setup(startFunc StartFunc, stopFunc StopFunc) {
-	b.startFunc = startFunc
-	b.stopFunc = stopFunc
+func (tb *ToggleBox) Setup(startFunc StartFunc, stopFunc StopFunc) {
+	tb.startFunc = startFunc
+	tb.stopFunc = stopFunc
 }
 
-func (b *ToggleBox) IsOn() bool {
-	return b.cancel != nil
+func (tb *ToggleBox) IsOn() bool {
+	return tb.cancel != nil
 }
 
-func (b *ToggleBox) On(ctx context.Context) error {
-	if b.IsOn() {
+func (tb *ToggleBox) On(ctx context.Context) error {
+	if tb.IsOn() {
 		return nil
 	}
 
 	newCtx, newCancel := context.WithCancel(ctx)
-	if err := b.startFunc(newCtx); err != nil {
+	if err := tb.startFunc(newCtx); err != nil {
 		newCancel()
 		return err
 	}
 
-	b.cancel = newCancel
+	tb.cancel = newCancel
 	return nil
 }
 
-func (b *ToggleBox) Off() error {
-	if !b.IsOn() {
+func (tb *ToggleBox) Off() error {
+	if !tb.IsOn() {
 		return nil
 	}
 
-	if err := b.stopFunc(); err != nil {
+	if err := tb.stopFunc(); err != nil {
 		return err
 	}
 
-	b.cancel = nil
+	tb.cancel = nil
 	return nil
 }
 
-func (b *ToggleBox) Cancel() {
-	b.cancel()
+func (tb *ToggleBox) Cancel() {
+	tb.cancel()
+}
+
+/* ------------------------------------------------------------------------------ */
+
+type SafeToggleBox struct {
+	ToggleBox
+	mu sync.Mutex
+}
+
+func (tb *SafeToggleBox) IsOn() bool {
+	tb.mu.Lock()
+	defer tb.mu.Unlock()
+	return tb.ToggleBox.IsOn()
+}
+
+func (tb *SafeToggleBox) On(ctx context.Context) error {
+	tb.mu.Lock()
+	defer tb.mu.Unlock()
+	return tb.ToggleBox.On(ctx)
+}
+
+func (tb *SafeToggleBox) Off() error {
+	tb.mu.Lock()
+	defer tb.mu.Unlock()
+	return tb.ToggleBox.Off()
 }

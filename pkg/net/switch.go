@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"project/pkg/toggle"
-	"project/pkg/toggle/boxes"
+	"project/pkg/toggle/boxes/collective"
 	"sync"
 )
 
@@ -12,12 +12,12 @@ type VirtualSwitch struct {
 	*toggle.TogglerAPI
 	vPorts     []*VirtualPort
 	sMACTable  *MACTable
-	sToggleBox *boxes.AssistedCollectiveToggleBox
+	sToggleBox *collective.AssistedToggleBox
 	mu         sync.Mutex
 }
 
 func NewVirtualSwitch(vPorts []*VirtualPort, outputTableChanges bool) *VirtualSwitch {
-	sToggleBox := boxes.NewAssistedCollectiveToggleBox()
+	sToggleBox := collective.NewAssistedToggleBox()
 
 	vs := &VirtualSwitch{
 		TogglerAPI: toggle.NewTogglerAPI(sToggleBox),

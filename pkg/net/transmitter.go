@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"project/pkg/toggle"
-	"project/pkg/toggle/boxes"
+	"project/pkg/toggle/boxes/atomic"
 )
 
 type FrameWriter interface {
@@ -21,11 +21,11 @@ type FrameTransmitter struct {
 	portName      string
 	outFrames     chan Frame
 	writerFactory FrameWriterFactory
-	sToggleBox    *boxes.AssistedAtomicToggleBox
+	sToggleBox    *atomic.AssistedToggleBox
 }
 
 func NewFrameTransmitter(portName string, writerFactory FrameWriterFactory) *FrameTransmitter {
-	sToggleBox := boxes.NewAssistedAtomicToggleBox()
+	sToggleBox := atomic.NewAssistedToggleBox()
 
 	ft := &FrameTransmitter{
 		TogglerAPI:    toggle.NewTogglerAPI(sToggleBox),
