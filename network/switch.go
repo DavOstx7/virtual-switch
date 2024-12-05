@@ -1,4 +1,4 @@
-package virtual
+package network
 
 import (
 	"context"

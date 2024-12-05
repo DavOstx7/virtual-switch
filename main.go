@@ -2,16 +2,16 @@ package main
 
 import (
 	"context"
-	"project/network/virtual"
+	"project/network"
 	"project/stubs"
 	"time"
 )
 
 func main() {
-	vSwitch := virtual.NewSwitch(
-		[]*virtual.Port{
-			virtual.NewPort(
-				&virtual.PortConfig{
+	vSwitch := network.NewSwitch(
+		[]*network.Port{
+			network.NewPort(
+				&network.PortConfig{
 					PortName: "eth1",
 					FrameSourceProvider: &stubs.FrameSourceProvider{
 						MaxJitter:       5 * time.Second,
@@ -21,8 +21,8 @@ func main() {
 					FrameTransmitterProvider: &stubs.FrameTransmitterProvider{},
 				},
 			),
-			virtual.NewPort(
-				&virtual.PortConfig{
+			network.NewPort(
+				&network.PortConfig{
 					PortName: "eth2",
 					FrameSourceProvider: &stubs.FrameSourceProvider{
 						MaxJitter:       10 * time.Second,
@@ -32,8 +32,8 @@ func main() {
 					FrameTransmitterProvider: &stubs.FrameTransmitterProvider{},
 				},
 			),
-			virtual.NewPort(
-				&virtual.PortConfig{
+			network.NewPort(
+				&network.PortConfig{
 					PortName: "eth3",
 					FrameSourceProvider: &stubs.FrameSourceProvider{
 						MaxJitter:       20 * time.Second,
