@@ -28,6 +28,7 @@ func (t *CommonToggler) On(ctx context.Context) error {
 
 	newCtx, newCancel := context.WithCancel(ctx)
 	if err := t.startFunc(newCtx); err != nil {
+		newCancel()
 		return err
 	}
 
