@@ -12,7 +12,7 @@ type VirtualPort struct {
 	FrameSniffer     *FrameSniffer
 	FrameTransmitter *FrameTransmitter
 	portName         string
-	sToggleBox       *boxes.AssistedSafeToggleBox
+	sToggleBox       *boxes.SafeToggleBox
 }
 
 type VirtualPortConfig struct {
@@ -22,7 +22,7 @@ type VirtualPortConfig struct {
 }
 
 func NewVirtualPort(config *VirtualPortConfig) *VirtualPort {
-	sToggleBox := boxes.NewAssistedSafeToggleBox()
+	sToggleBox := boxes.NewSafeToggleBox()
 
 	vp := &VirtualPort{
 		TogglerAPI:       toggle.NewTogglerAPI(sToggleBox),
@@ -32,7 +32,8 @@ func NewVirtualPort(config *VirtualPortConfig) *VirtualPort {
 		sToggleBox:       sToggleBox,
 	}
 
-	sToggleBox.Setup(vp.startProcessingFrames, vp.finalizeProcessingFrames)
+	sToggleBox.SetStarter(vp.startProcessingFrames)
+	sToggleBox.SetStopper(sToggleBox.NewStopperFromDefault(vp.stopProcessingFrames))
 
 	return vp
 }
@@ -57,7 +58,7 @@ func (vp *VirtualPort) startProcessingFrames(ctx context.Context) error {
 	return nil
 }
 
-func (vp *VirtualPort) finalizeProcessingFrames() error {
+func (vp *VirtualPort) stopProcessingFrames() error {
 	for err := range toggle.Off(vp.FrameSniffer, vp.FrameTransmitter) {
 		fmt.Println(err)
 	}

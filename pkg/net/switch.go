@@ -12,12 +12,12 @@ type VirtualSwitch struct {
 	*toggle.TogglerAPI
 	vPorts     []*VirtualPort
 	sMACTable  *MACTable
-	sToggleBox *boxes.AssistedCollectiveToggleBox
+	sToggleBox *boxes.CollectiveToggleBox
 	mu         sync.Mutex
 }
 
 func NewVirtualSwitch(vPorts []*VirtualPort, outputTableChanges bool) *VirtualSwitch {
-	sToggleBox := boxes.NewAssistedCollectiveToggleBox()
+	sToggleBox := boxes.NewCollectiveToggleBox()
 
 	vs := &VirtualSwitch{
 		TogglerAPI: toggle.NewTogglerAPI(sToggleBox),
@@ -26,7 +26,8 @@ func NewVirtualSwitch(vPorts []*VirtualPort, outputTableChanges bool) *VirtualSw
 		sToggleBox: sToggleBox,
 	}
 
-	sToggleBox.Setup(vs.startPortForwarding, vs.finalizePortForwarding)
+	sToggleBox.SetStarter(vs.startPortForwarding)
+	sToggleBox.SetStopper(sToggleBox.NewStopperFromDefault(vs.stopPortForwarding))
 
 	return vs
 }
@@ -48,7 +49,7 @@ func (vs *VirtualSwitch) startPortForwarding(ctx context.Context) error {
 	return nil
 }
 
-func (vs *VirtualSwitch) finalizePortForwarding() error {
+func (vs *VirtualSwitch) stopPortForwarding() error {
 	vs.mu.Lock()
 	defer vs.mu.Unlock()
 

@@ -3,12 +3,19 @@ package boxes
 import (
 	"context"
 	"sync"
-	"project/pkg/utils"
 )
 
 type SafeToggleBox struct {
 	ToggleBox
 	mu sync.Mutex
+}
+
+func NewSafeToggleBox() *SafeToggleBox {
+	b := new(SafeToggleBox)
+
+	b.SetStopper(b.DefaultStopper())
+
+	return b
 }
 
 func (b *SafeToggleBox) IsOn() bool {
@@ -29,28 +36,13 @@ func (b *SafeToggleBox) Off() error {
 	return b.ToggleBox.Off()
 }
 
-/* ------------------------------------------------------------------------------ */
-
-type AssistedSafeToggleBox struct {
-	SafeToggleBox
-}
-
-func NewAssistedSafeToggleBox() *AssistedSafeToggleBox {
-	return new(AssistedSafeToggleBox)
-}
-
-func (b *AssistedSafeToggleBox) Setup(startFunc StartFunc, finalizeFunc func() error) {
-	stopFunc := b.wrapFinalizeFuncToStopFunc(finalizeFunc)
-	b.SafeToggleBox.Setup(startFunc, stopFunc)
-}
-
-func (b *AssistedSafeToggleBox) BasicSetup(startFunc StartFunc) {
-	b.Setup(startFunc, nil)
-}
-
-func (b *AssistedSafeToggleBox) wrapFinalizeFuncToStopFunc(finalizeFunc func() error) StopFunc {
+func (b *SafeToggleBox) DefaultStopper() StopFunc {
 	return func() error {
-		b.cancel()
-		return utils.ExecuteFunc(finalizeFunc)
+		b.Cancel()
+		return nil
 	}
+}
+
+func (b *SafeToggleBox) NewStopperFromDefault(stopExtension func() error) StopFunc {
+	return extendStopFunc(b.DefaultStopper(), stopExtension)
 }

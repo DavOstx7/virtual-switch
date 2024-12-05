@@ -21,11 +21,11 @@ type FrameTransmitter struct {
 	portName      string
 	outFrames     chan Frame
 	writerFactory FrameWriterFactory
-	sToggleBox    *boxes.AssistedAtomicToggleBox
+	sToggleBox    *boxes.AtomicToggleBox
 }
 
 func NewFrameTransmitter(portName string, writerFactory FrameWriterFactory) *FrameTransmitter {
-	sToggleBox := boxes.NewAssistedAtomicToggleBox()
+	sToggleBox := boxes.NewAtomicToggleBox()
 
 	ft := &FrameTransmitter{
 		TogglerAPI:    toggle.NewTogglerAPI(sToggleBox),
@@ -35,7 +35,7 @@ func NewFrameTransmitter(portName string, writerFactory FrameWriterFactory) *Fra
 		sToggleBox:    sToggleBox,
 	}
 
-	sToggleBox.BasicSetup(ft.startTransmittingFrames)
+	sToggleBox.SetStarter(ft.startTransmittingFrames)
 
 	return ft
 }

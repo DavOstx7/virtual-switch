@@ -15,9 +15,16 @@ func NewToggleBox() *ToggleBox {
 	return new(ToggleBox)
 }
 
-func (b *ToggleBox) Setup(startFunc StartFunc, stopFunc StopFunc) {
+func (b *ToggleBox) SetStarter(startFunc StartFunc) {
 	b.startFunc = startFunc
+}
+
+func (b *ToggleBox) SetStopper(stopFunc StopFunc) {
 	b.stopFunc = stopFunc
+}
+
+func (b *ToggleBox) Cancel() {
+	b.cancel()
 }
 
 func (b *ToggleBox) IsOn() bool {
@@ -30,9 +37,11 @@ func (b *ToggleBox) On(ctx context.Context) error {
 	}
 
 	newCtx, newCancel := context.WithCancel(ctx)
-	if err := b.startFunc(newCtx); err != nil {
-		newCancel()
-		return err
+	if b.startFunc != nil {
+		if err := b.startFunc(newCtx); err != nil {
+			newCancel()
+			return err
+		}
 	}
 
 	b.cancel = newCancel
@@ -44,14 +53,12 @@ func (b *ToggleBox) Off() error {
 		return nil
 	}
 
-	if err := b.stopFunc(); err != nil {
-		return err
+	if b.stopFunc != nil {
+		if err := b.stopFunc(); err != nil {
+			return err
+		}
 	}
 
 	b.cancel = nil
 	return nil
-}
-
-func (b *ToggleBox) Cancel() {
-	b.cancel()
 }
