@@ -49,7 +49,7 @@ func main() {
 
 	ctx := context.Background()
 	vSwitch.On(ctx)
-	for {
-
-	}
+	time.Sleep(5 * time.Second)
+	vSwitch.Off()
+	time.Sleep(5 * time.Second)
 }

@@ -1,27 +1,29 @@
 package toggle
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type AtomicToggler struct {
 	CommonToggler
-	Done chan bool
+	done chan bool
 }
 
 func (t *AtomicToggler) Setup(startFunc func(context.Context) error) {
 	newStartFunc := func(ctx context.Context) error {
-		t.Done = make(chan bool)
-		if err := startFunc(ctx); err != nil {
-			close(t.Done)
-			t.Done = nil
-			return err
-		}
+		t.done = make(chan bool)
+		go func() {
+			if err := startFunc(ctx); err != nil {
+				fmt.Println(err)
+			}
+			close(t.done)
+		} ()
 		return nil
 	}
 	stopFunc := func() error {
-		if _, ok := <-t.Done; ok {
-			close(t.Done)
-		}
-		t.Done = nil
+		<-t.done
+		t.done = nil
 		return nil
 	}
 

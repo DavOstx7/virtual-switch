@@ -43,13 +43,11 @@ func (c *Capture) startFrameCapture(ctx context.Context) error {
 		return err
 	}
 
-	go c.captureFrames(ctx, source)
+	c.captureFrames(ctx, source)
 	return nil
 }
 
 func (c *Capture) captureFrames(ctx context.Context, source Source) {
-	defer close(c.Done)
-
 	frames := source.Frames()
 	defer source.Close()
 

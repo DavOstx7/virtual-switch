@@ -44,12 +44,11 @@ func (t *Transmit) startFrameTransmit(ctx context.Context) error {
 		return err
 	}
 
-	go t.transmitFrames(ctx, transmitter)
+	t.transmitFrames(ctx, transmitter)
 	return nil
 }
 
 func (t *Transmit) transmitFrames(ctx context.Context, transmitter Transmitter) {
-	defer close(t.Done)
 	defer transmitter.Close()
 
 	for {

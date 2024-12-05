@@ -6,21 +6,21 @@ import (
 )
 
 type CommonToggler struct {
-	Mu        sync.Mutex
+	mu        sync.Mutex
 	startFunc func(context.Context) error
 	stopFunc  func() error
 	cancel    context.CancelFunc
 }
 
 func (t *CommonToggler) IsOn() bool {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	return t._isOn()
 }
 
 func (t *CommonToggler) On(ctx context.Context) error {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
 	if t._isOn() {
 		return nil
@@ -37,8 +37,8 @@ func (t *CommonToggler) On(ctx context.Context) error {
 }
 
 func (t *CommonToggler) Off() error {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
 	if !t._isOn() {
 		return nil
@@ -54,8 +54,8 @@ func (t *CommonToggler) Off() error {
 }
 
 func (t *CommonToggler) Setup(startFunc func(context.Context) error, stopFunc func() error) {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	t.startFunc = startFunc
 	t.stopFunc = stopFunc
 }
