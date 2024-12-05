@@ -26,6 +26,6 @@ func (b *AssistedToggleBox) wrapFinalizeFuncToStopFunc(finalizeFunc func() error
 	return func() error {
 		b.Cancel()
 		b.Wait()
-		return utils.ExecuteFunc(finalizeFunc)
+		return utils.ExecuteFuncIfNotNil(finalizeFunc)
 	}
 }

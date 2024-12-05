@@ -22,6 +22,6 @@ func (b *AssistedSafeToggleBox) BasicSetup(startFunc StartFunc) {
 func (b *AssistedSafeToggleBox) wrapFinalizeFuncToStopFunc(finalizeFunc func() error) StopFunc {
 	return func() error {
 		b.Cancel()
-		return utils.ExecuteFunc(finalizeFunc)
+		return utils.ExecuteFuncIfNotNil(finalizeFunc)
 	}
 }
