@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"project/pkg/net"
+	"project/pkg/net/device"
 	"project/stubs"
 	"time"
 )
@@ -10,10 +10,10 @@ import (
 const SwitchOnDuration = 10 * time.Second
 
 func main() {
-	vSwitch := net.NewVirtualSwitch(
-		[]*net.VirtualPort{
-			net.NewVirtualPort(
-				&net.VirtualPortConfig{
+	vSwitch := device.NewVirtualSwitch(
+		[]*device.VirtualPort{
+			device.NewVirtualPort(
+				&device.VirtualPortConfig{
 					PortName: "eth1",
 					FrameSourceFactory: &stubs.FrameSourceFactoryStub{
 						MaxJitter:       5 * time.Second,
@@ -23,8 +23,8 @@ func main() {
 					FrameWriterFactory: &stubs.FrameWriterFactoryStub{},
 				},
 			),
-			net.NewVirtualPort(
-				&net.VirtualPortConfig{
+			device.NewVirtualPort(
+				&device.VirtualPortConfig{
 					PortName: "eth2",
 					FrameSourceFactory: &stubs.FrameSourceFactoryStub{
 						MaxJitter:       10 * time.Second,
@@ -34,8 +34,8 @@ func main() {
 					FrameWriterFactory: &stubs.FrameWriterFactoryStub{},
 				},
 			),
-			net.NewVirtualPort(
-				&net.VirtualPortConfig{
+			device.NewVirtualPort(
+				&device.VirtualPortConfig{
 					PortName: "eth3",
 					FrameSourceFactory: &stubs.FrameSourceFactoryStub{
 						MaxJitter:       20 * time.Second,

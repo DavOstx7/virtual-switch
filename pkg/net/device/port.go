@@ -1,24 +1,25 @@
-package net
+package device
 
 import (
 	"context"
 	"fmt"
+	"project/pkg/net/frame"
 	"project/pkg/toggle"
 	"project/pkg/toggle/boxes"
 )
 
 type VirtualPort struct {
 	*toggle.TogglerAPI
-	FrameSniffer     *FrameSniffer
-	FrameTransmitter *FrameTransmitter
+	FrameSniffer     *frame.Sniffer
+	FrameTransmitter *frame.Transmitter
 	portName         string
 	sToggleBox       *boxes.AssistedSafeToggleBox
 }
 
 type VirtualPortConfig struct {
 	PortName           string
-	FrameSourceFactory FrameSourceFactory
-	FrameWriterFactory FrameWriterFactory
+	FrameSourceFactory frame.SourceFactory
+	FrameWriterFactory frame.WriterFactory
 }
 
 func NewVirtualPort(config *VirtualPortConfig) *VirtualPort {
@@ -26,8 +27,8 @@ func NewVirtualPort(config *VirtualPortConfig) *VirtualPort {
 
 	vp := &VirtualPort{
 		TogglerAPI:       toggle.NewTogglerAPI(sToggleBox),
-		FrameSniffer:     NewFrameSniffer(config.PortName, config.FrameSourceFactory),
-		FrameTransmitter: NewFrameTransmitter(config.PortName, config.FrameWriterFactory),
+		FrameSniffer:     frame.NewSniffer(config.PortName, config.FrameSourceFactory),
+		FrameTransmitter: frame.NewTransmitter(config.PortName, config.FrameWriterFactory),
 		portName:         config.PortName,
 		sToggleBox:       sToggleBox,
 	}
@@ -41,12 +42,12 @@ func (vp *VirtualPort) Name() string {
 	return vp.portName
 }
 
-func (vp *VirtualPort) InFrames() <-chan Frame {
-	return vp.FrameSniffer.inFrames
+func (vp *VirtualPort) InFrames() <-chan frame.Frame {
+	return vp.FrameSniffer.InFrames()
 }
 
-func (vp *VirtualPort) OutFrames() chan<- Frame {
-	return vp.FrameTransmitter.outFrames
+func (vp *VirtualPort) OutFrames() chan<- frame.Frame {
+	return vp.FrameTransmitter.OutFrames()
 }
 
 func (vp *VirtualPort) startProcessingFrames(ctx context.Context) error {

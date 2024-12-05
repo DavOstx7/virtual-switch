@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"project/pkg/net"
+	"project/pkg/net/frame"
 	"sync"
 	"time"
 )
@@ -16,20 +16,20 @@ type FrameSourceStub struct {
 	destinationMACs []string
 	maxJitter       time.Duration
 	portName        string
-	frames          chan net.Frame
+	frames          chan frame.Frame
 	done            chan bool
 	stopTimeout     time.Duration
 	once            sync.Once
 }
 
 /*
-type FrameSource interface {
+type Source interface {
 	Frames() <-chan Frame
 	Close()
 }
 */
 
-func (fs *FrameSourceStub) Frames() <-chan net.Frame {
+func (fs *FrameSourceStub) Frames() <-chan frame.Frame {
 	return fs.frames
 }
 
@@ -97,12 +97,12 @@ type FrameSourceFactoryStub struct {
 }
 
 /*
-type FrameSourceFactory interface {
+type SourceFactory interface {
 	NewFrameSource(ctx context.Context, portName string) (FrameSource, error)
 }
 */
 
-func (fsf *FrameSourceFactoryStub) NewFrameSource(ctx context.Context, portName string) (net.FrameSource, error) {
+func (fsf *FrameSourceFactoryStub) NewFrameSource(ctx context.Context, portName string) (frame.Source, error) {
 	if fsf.MaxJitter <= 0 {
 		return nil, fmt.Errorf("max jitter duration must be positive")
 	}
@@ -115,7 +115,7 @@ func (fsf *FrameSourceFactoryStub) NewFrameSource(ctx context.Context, portName 
 		SourceMACs:      fsf.SourceMACs,
 		destinationMACs: fsf.DestinationMACs,
 		maxJitter:       fsf.MaxJitter,
-		frames:          make(chan net.Frame),
+		frames:          make(chan frame.Frame),
 		done:            make(chan bool),
 		stopTimeout:     DefaultFrameSourceStopTimeout,
 	}

@@ -1,10 +1,11 @@
-package net
+package device
 
 import (
 	"context"
 	"fmt"
 	"project/pkg/toggle"
 	"project/pkg/toggle/boxes/collective"
+	"project/pkg/net/frame"
 	"sync"
 )
 
@@ -75,7 +76,7 @@ func (vs *VirtualSwitch) forwardFrames(ctx context.Context, vPort *VirtualPort) 
 	}
 }
 
-func (vs *VirtualSwitch) forwardFrame(ctx context.Context, vSourcePort *VirtualPort, frame Frame) {
+func (vs *VirtualSwitch) forwardFrame(ctx context.Context, vSourcePort *VirtualPort, frame frame.Frame) {
 	vs.sMACTable.LearnMAC(frame.SourceMAC(), vSourcePort)
 
 	vDestinationPort := vs.sMACTable.LookupPort(frame.DestinationMAC())
@@ -86,7 +87,7 @@ func (vs *VirtualSwitch) forwardFrame(ctx context.Context, vSourcePort *VirtualP
 	}
 }
 
-func (vs *VirtualSwitch) broadcastFrame(ctx context.Context, vSourcePort *VirtualPort, frame Frame) {
+func (vs *VirtualSwitch) broadcastFrame(ctx context.Context, vSourcePort *VirtualPort, frame frame.Frame) {
 	vs.mu.Lock()
 	defer vs.mu.Unlock()
 
@@ -101,7 +102,7 @@ func (vs *VirtualSwitch) broadcastFrame(ctx context.Context, vSourcePort *Virtua
 	}
 }
 
-func (vs *VirtualSwitch) sendFrame(ctx context.Context, vPort *VirtualPort, frame Frame) (ok bool) {
+func (vs *VirtualSwitch) sendFrame(ctx context.Context, vPort *VirtualPort, frame frame.Frame) (ok bool) {
 	select {
 	case vPort.OutFrames() <- frame:
 		return true

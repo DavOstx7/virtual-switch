@@ -3,7 +3,7 @@ package stubs
 import (
 	"context"
 	"fmt"
-	"project/pkg/net"
+	"project/pkg/net/frame"
 )
 
 type FrameWriter struct {
@@ -12,13 +12,13 @@ type FrameWriter struct {
 }
 
 /*
-type FrameWriter interface {
+type Writer interface {
 	WriteFrame(ctx context.Context, frame Frame) error
 	Close()
 }
 */
 
-func (fw *FrameWriter) WriteFrame(ctx context.Context, frame net.Frame) error {
+func (fw *FrameWriter) WriteFrame(ctx context.Context, frame frame.Frame) error {
 	fmt.Printf("sent frame %s to port '%s'\n", FrameToString(frame), fw.portName)
 	return nil
 }
@@ -33,12 +33,12 @@ type FrameWriterFactoryStub struct {
 }
 
 /*
-type FrameWriterFactory interface {
+type WriterFactory interface {
 	NewFrameWriter(ctx context.Context, portName string) (FrameWriter, error)
 }
 */
 
-func (fwf *FrameWriterFactoryStub) NewFrameWriter(ctx context.Context, portName string) (net.FrameWriter, error) {
+func (fwf *FrameWriterFactoryStub) NewFrameWriter(ctx context.Context, portName string) (frame.Writer, error) {
 	return &FrameWriter{
 		portName: portName,
 		closed:   false,

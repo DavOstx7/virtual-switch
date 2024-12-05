@@ -1,4 +1,4 @@
-package net
+package frame
 
 type Frame interface {
 	Bytes() []byte
