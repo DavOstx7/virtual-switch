@@ -22,14 +22,13 @@ func (mt *MACTable) LearnMAC(sourceMAC string, vPort *VirtualPort) {
 	mt.mu.Lock()
 	defer mt.mu.Unlock()
 
+	if vExistingPort, ok := mt.entries[sourceMAC]; ok && vExistingPort == vPort {
+		return
+	}
+
+	mt.entries[sourceMAC] = vPort
 	if mt.outputChanges {
-		if vExistingPort, ok := mt.entries[sourceMAC]; ok && vExistingPort == vPort {
-			return
-		}
-		mt.entries[sourceMAC] = vPort
 		fmt.Println(mt.unsafeString())
-	} else {
-		mt.entries[sourceMAC] = vPort
 	}
 }
 
