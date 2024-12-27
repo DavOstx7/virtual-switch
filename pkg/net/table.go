@@ -1,4 +1,4 @@
-package pkg
+package net
 
 import (
 	"fmt"
@@ -18,22 +18,21 @@ func NewMACTable(outputChanges bool) *MACTable {
 	}
 }
 
-func (mt *MACTable) UpdateSourceEntry(sourceMAC string, vPort *VirtualPort) {
+func (mt *MACTable) LearnMAC(sourceMAC string, vPort *VirtualPort) {
 	mt.mu.Lock()
 	defer mt.mu.Unlock()
 
+	if vExistingPort, ok := mt.entries[sourceMAC]; ok && vExistingPort == vPort {
+		return
+	}
+
+	mt.entries[sourceMAC] = vPort
 	if mt.outputChanges {
-		if vExistingPort, ok := mt.entries[sourceMAC]; ok && vExistingPort == vPort {
-			return
-		}
-		mt.entries[sourceMAC] = vPort
-		fmt.Println(mt._string())
-	} else {
-		mt.entries[sourceMAC] = vPort
+		fmt.Println(mt.unsafeString())
 	}
 }
 
-func (mt *MACTable) GetDestinationPort(destinationMAC string) *VirtualPort {
+func (mt *MACTable) LookupPort(destinationMAC string) *VirtualPort {
 	mt.mu.Lock()
 	defer mt.mu.Unlock()
 
@@ -47,10 +46,10 @@ func (mt *MACTable) GetDestinationPort(destinationMAC string) *VirtualPort {
 func (mt *MACTable) String() string {
 	mt.mu.Lock()
 	defer mt.mu.Unlock()
-	return mt._string()
+	return mt.unsafeString()
 }
 
-func (mt *MACTable) _string() string {
+func (mt *MACTable) unsafeString() string {
 	var result string
 
 	border := "+----------------------+------------+"
@@ -61,7 +60,7 @@ func (mt *MACTable) _string() string {
 	result += "|----------------------|------------|\n"
 
 	for mac, vPort := range mt.entries {
-		result += fmt.Sprintf("| %-20s | %-10s |\n", mac, vPort.PortName())
+		result += fmt.Sprintf("| %-20s | %-10s |\n", mac, vPort.Name())
 	}
 
 	result += border

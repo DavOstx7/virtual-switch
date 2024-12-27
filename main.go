@@ -2,45 +2,47 @@ package main
 
 import (
 	"context"
-	"project/pkg"
+	"project/pkg/net"
 	"project/stubs"
 	"time"
 )
 
+const SwitchOnDuration = 10 * time.Second
+
 func main() {
-	vSwitch := pkg.NewVirtualSwitch(
-		[]*pkg.VirtualPort{
-			pkg.NewVirtualPort(
-				&pkg.VirtualPortConfig{
+	vSwitch := net.NewVirtualSwitch(
+		[]*net.VirtualPort{
+			net.NewVirtualPort(
+				&net.VirtualPortConfig{
 					PortName: "eth1",
-					FrameSourceProvider: &stubs.FrameSourceProviderStub{
+					FrameSourceFactory: &stubs.FrameSourceFactoryStub{
 						MaxJitter:       5 * time.Second,
 						SourceMACs:      []string{"AAA"},
 						DestinationMACs: []string{"BBB", "CCC"},
 					},
-					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
+					FrameWriterFactory: &stubs.FrameWriterFactoryStub{},
 				},
 			),
-			pkg.NewVirtualPort(
-				&pkg.VirtualPortConfig{
+			net.NewVirtualPort(
+				&net.VirtualPortConfig{
 					PortName: "eth2",
-					FrameSourceProvider: &stubs.FrameSourceProviderStub{
+					FrameSourceFactory: &stubs.FrameSourceFactoryStub{
 						MaxJitter:       10 * time.Second,
 						SourceMACs:      []string{"BBB"},
 						DestinationMACs: []string{"AAA", "CCC"},
 					},
-					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
+					FrameWriterFactory: &stubs.FrameWriterFactoryStub{},
 				},
 			),
-			pkg.NewVirtualPort(
-				&pkg.VirtualPortConfig{
+			net.NewVirtualPort(
+				&net.VirtualPortConfig{
 					PortName: "eth3",
-					FrameSourceProvider: &stubs.FrameSourceProviderStub{
+					FrameSourceFactory: &stubs.FrameSourceFactoryStub{
 						MaxJitter:       20 * time.Second,
 						SourceMACs:      []string{"CCC"},
 						DestinationMACs: []string{"AAA", "BBB"},
 					},
-					FrameTransmitterProvider: &stubs.FrameTransmitterProviderStub{},
+					FrameWriterFactory: &stubs.FrameWriterFactoryStub{},
 				},
 			),
 		},
@@ -49,5 +51,6 @@ func main() {
 
 	ctx := context.Background()
 	vSwitch.On(ctx)
-	vSwitch.Wait()
+	time.Sleep(SwitchOnDuration)
+	vSwitch.Off()
 }
